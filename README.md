@@ -24,7 +24,6 @@ Never commit large data files,trained models, personal API Keys/secrets to GitHu
     │   ├── docker-shell.sh
     │   ├── preprocess_cv.py
     │   ├── preprocess_rag.py
-    ├── docker-compose.yml
     └── models
         ├── Dockerfile
         ├── docker-shell.sh
