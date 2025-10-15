@@ -175,6 +175,14 @@ ls test_pics/unknown.jpg  # Should exist
 sudo chown -R $USER:$USER test_output/
 ```
 
+### Build error: "Package 'libgl1-mesa-glx' has no installation candidate"
+
+**Fixed!** The Dockerfile has been updated to use `libgl1` instead. Just rebuild:
+
+```bash
+./docker-shell.sh
+```
+
 ---
 
 ## Summary
