@@ -1,35 +1,42 @@
-## Milestone 2 Template
+# AC215 - Milestone 2 - Farfetch Dataset Image Extraction
+
+**Team Members**
+[Add your team member names here]
+
+**Group Name**
+[Add your group name here]
+
+**Project**
+In this project, we are building a fashion/product analysis system using the Farfetch dataset. Our pipeline extracts product images from Farfetch JSON datasets with multi-threading capabilities, processes them for computer vision tasks, and prepares data for RAG (Retrieval-Augmented Generation) models. The system is designed to handle large-scale fashion product data with robust error handling and efficient parallel processing.
+
+---
+
+## 📁 Project Structure
 
 ```
-The files are empty placeholders only. You may adjust this template as appropriate for your project.
-Never commit large data files,trained models, personal API Keys/secrets to GitHub
-```
-
-#### Project Milestone 2 Organization
-
-```
-├── Readme.md
-├── data # DO NOT UPLOAD DATA TO GITHUB, only .gitkeep to keep the directory or a really small sample
-│   ├── images/           # Downloaded product images
-│   ├── men_data/         # Men's product dataset JSON files
-│   └── women_data/       # Women's product dataset JSON files
-├── notebooks
-│   └── eda.ipynb
-├── references
-├── reports
+project/
+├── README.md
+├── data/                       # DO NOT UPLOAD DATA TO GITHUB
+│   ├── images/                # Downloaded product images (output)
+│   ├── men_data/              # Men's product dataset JSON files
+│   └── women_data/            # Women's product dataset JSON files
+├── notebooks/
+│   └── eda.ipynb             # Exploratory Data Analysis
+├── references/
+├── reports/
 │   └── Statement of Work_Sample.pdf
-└── src
-    ├── datapipeline
+└── src/
+    ├── datapipeline/
     │   ├── Dockerfile
     │   ├── Pipfile
     │   ├── Pipfile.lock
     │   ├── dataloader.py
     │   ├── docker-shell.sh
-    │   ├── extract_images.py   # Image extraction from Farfetch dataset
+    │   ├── extract_images.py   # Multi-threaded image extraction
     │   ├── retry_failed.py     # Retry failed image downloads
-    │   ├── preprocess_cv.py
-    │   └── preprocess_rag.py
-    └── models
+    │   ├── preprocess_cv.py    # Computer vision preprocessing
+    │   └── preprocess_rag.py   # RAG data preparation
+    └── models/
         ├── Dockerfile
         ├── docker-shell.sh
         ├── infer_model.py
@@ -37,93 +44,306 @@ Never commit large data files,trained models, personal API Keys/secrets to GitHu
         └── train_model.py
 ```
 
-# AC215 - Milestone2 - Cheesy App
+---
 
-**Team Members**
-Pavlos Parmigianopapas, Pavlos Ricottapapas and Pavlos Gouda-papas
+## 🚀 Milestone 2 Overview
 
-**Group Name**
-The Grate Cheese Group
+In this milestone, we have developed the core components for data management, including versioning, extraction, and preprocessing pipelines for both computer vision and language models.
 
-**Project**
-In this project, we aim to develop an AI-powered cheese application. The app will feature visual recognition technology to identify various types of cheese and include a chatbot for answering all kinds of cheese-related questions. Users can simply take a photo of the cheese, and the app will identify it, providing detailed information. Additionally, the chatbot will allow users to ask cheese-related questions. It will be powered by a RAG model and fine-tuned models, making it a specialist in cheese expertise.
+### Data Collection
 
-### Milestone2 ###
+We are working with product datasets from Farfetch, including:
+- Men's fashion products with images and metadata
+- Women's fashion products with images and metadata
+- Product information including brands, descriptions, categories, prices, and multiple product images
+- The datasets are stored as JSON files and processed to extract product images
 
-In this milestone, we have the components for data management, including versioning, as well as the computer vision and language models.
+---
 
-**Data**
-We gathered a dataset of 100,000 cheese images representing approximately 1,500 different varieties. The dataset, approximately 100GB in size, was collected from the following sources: (1), (2), (3). We have stored it in a private Google Cloud Bucket.
-Additionally, we compiled 250 bibliographical sources on cheese, including books and reports, from sources such as (4) and (5).
+## 📊 Data Pipeline
 
-**Data Pipeline Containers**
-1. One container processes the 100GB dataset by resizing the images and storing them back to Google Cloud Storage (GCS).
+### 1. Image Extraction (`src/datapipeline/extract_images.py`)
 
-	**Input:** Source and destination GCS locations, resizing parameters, and required secrets (provided via Docker).
+The primary script for extracting product images from Farfetch dataset JSON files.
 
-	**Output:** Resized images stored in the specified GCS location.
+**Features:**
+- ✅ **Multi-file Processing** - Automatically processes all JSON files in the data directory
+- ✅ **Multi-threaded Download** - 20 parallel workers for fast downloads
+- ✅ **Real-time Progress Bar** - Beautiful progress tracking with tqdm
+- ✅ **Smart Resume** - Skips already downloaded images
+- ✅ **Error Logging** - Failed downloads saved to `failed_downloads.txt`
+- ✅ **Index Filtering** - Extracts only index 1 and 2 images from product media
 
-2. Another container prepares data for the RAG model, including tasks such as chunking, embedding, and populating the vector database.
+**Usage:**
+```bash
+# Install dependencies first
+pip install requests tqdm
 
-## Data Pipeline Overview
+# Navigate to datapipeline directory
+cd src/datapipeline
 
-1. **`src/datapipeline/extract_images.py`**
-   This script extracts product images (index 1 and 2) from Farfetch dataset JSON files with multi-threading and progress bars. It processes all JSON files in the data directory (men_data or women_data), downloads images in parallel with configurable worker threads, and saves them to the `data/images/` folder. Features include smart resume (skips already downloaded images), error logging to `failed_downloads.txt`, and real-time progress tracking.
+# Edit extract_images.py to set DATA_DIR (men_data or women_data)
+# Then run the extractor
+python3 extract_images.py
+```
 
-   **Usage:**
+**Configuration in script:**
+```python
+DATA_DIR = '../../data/women_data'  # Change to men_data as needed
+OUTPUT_DIR = '../../data/images'
+MAX_WORKERS = 20                    # Number of parallel download threads
+SPECIFIC_FILES = []                 # Optional: specify particular JSON files
+```
+
+**Output Example:**
+```
+============================================================
+Farfetch Image Extractor
+Multi-threaded with Progress Bars
+============================================================
+
+Scanning directory: ../../data/women_data
+✓ Found 2 dataset file(s)
+
+Loading datasets...
+  Loading dataset_farfetch_2025-10-13.json...
+  ✓ Loaded 500 products from dataset_farfetch_2025-10-13.json
+  ✓ Found 1000 images from dataset_farfetch_2025-10-13.json
+
+Total Summary:
+  - Total products: 500
+  - Total images (index 1 & 2): 1000
+
+Starting parallel download:
+  - Total images: 1000
+  - Worker threads: 20
+  - Output directory: ../../data/images
+
+Downloading images: 100%|████████████| 1000/1000 [05:23<00:00, 3.09img/s]
+
+Download Summary:
+  ✓ Successfully downloaded: 850
+  ✓ Already existed: 100
+  ✗ Failed: 50
+
+✅ Processing complete!
+Images saved to: ../../data/images/
+```
+
+---
+
+### 2. Retry Failed Downloads (`src/datapipeline/retry_failed.py`)
+
+Retries downloading failed images with extended timeout and more aggressive retry strategy.
+
+**Features:**
+- Extended timeout: 60 seconds (3x longer than initial download)
+- 5 retry attempts with progressive wait times (3s, 6s, 9s, 12s, 15s)
+- Reads `failed_downloads.txt` and searches for URLs in dataset files
+- Updates the failed downloads log with remaining failures
+
+**Usage:**
+```bash
+cd src/datapipeline
+python3 retry_failed.py
+```
+
+**Configuration:**
+```python
+DATA_DIR = '../../data/women_data'  # Can change to men_data as needed
+OUTPUT_DIR = '../../data/images'
+FAILED_LOG = '../../data/images/failed_downloads.txt'
+MAX_WORKERS = 5  # Reduced workers for more stable connections
+```
+
+---
+
+### 3. Computer Vision Preprocessing (`src/datapipeline/preprocess_cv.py`)
+
+Handles preprocessing of images for computer vision tasks.
+
+**Features:**
+- Resizes images to configurable dimensions (default: 128x128)
+- Enables faster iteration during model training
+- Stores preprocessed dataset to Google Cloud Storage (GCS)
+
+**Input:** Source and destination GCS locations, resizing parameters, required secrets (provided via Docker)
+
+**Output:** Resized images stored in the specified GCS location
+
+---
+
+### 4. RAG Data Preparation (`src/datapipeline/preprocess_rag.py`)
+
+Prepares data for the RAG (Retrieval-Augmented Generation) model.
+
+**Features:**
+- Performs text chunking of product descriptions
+- Generates embeddings for product information
+- Populates vector database (ChromaDB) for efficient retrieval
+
+---
+
+## 🔧 Dataset Structure
+
+### Input JSON Format
+Each product in the dataset follows this structure:
+
+```json
+{
+  "brand": "Gucci",
+  "title": "GG Marmont leather shoulder bag",
+  "description": "Detailed product description...",
+  "categories": ["Women", "Bags", "Shoulder Bags"],
+  "medias": [
+    {
+      "type": "Image",
+      "url": "https://cdn-images.farfetch-contents.com/.../image.jpg",
+      "alt": "Product image",
+      "index": 1
+    },
+    {
+      "type": "Image",
+      "url": "https://cdn-images.farfetch-contents.com/.../image.jpg",
+      "alt": "Product image",
+      "index": 2
+    }
+  ],
+  "price": {
+    "current": 225000,
+    "currentFormatted": "$2,250"
+  },
+  "source": {
+    "id": "12345678"
+  }
+}
+```
+
+### Output Image Files
+Images are saved with the naming convention: `{product_id}_index{index}.jpg`
+
+```
+data/images/
+├── 12345678_index1.jpg
+├── 12345678_index2.jpg
+├── 23456789_index1.jpg
+├── 23456789_index2.jpg
+└── ...
+```
+
+---
+
+## 🐳 Docker Containers
+
+### Data Pipeline Container
+
+The data pipeline container handles all data extraction and preprocessing tasks.
+
+**To run the container:**
+```bash
+cd src/datapipeline
+./docker-shell.sh
+```
+
+**Features:**
+- Image extraction from Farfetch datasets
+- Computer vision preprocessing (image resizing, normalization)
+- RAG data preparation (chunking, embedding, vector DB population)
+- Integration with Google Cloud Storage
+
+### Models Container
+
+The models container contains scripts for model training, RAG pipeline, and inference.
+
+**To run the container:**
+```bash
+cd src/models
+./docker-shell.sh
+```
+
+**Components:**
+- `train_model.py` - Model training scripts
+- `model_rag.py` - RAG pipeline implementation
+- `infer_model.py` - Model inference
+
+---
+
+## 📦 Dependencies
+
+Core dependencies for the data pipeline:
+
+- `requests` - HTTP requests and image downloads
+- `tqdm` - Progress bars for download tracking
+- `Pillow` - Image processing
+- Additional dependencies in `Pipfile`
+
+**Installation:**
+```bash
+pip install requests tqdm Pillow
+```
+
+---
+
+## 📓 Notebooks & Reports
+
+The `notebooks/` directory contains exploratory data analysis and visualizations:
+- `eda.ipynb` - Exploratory Data Analysis of the Farfetch dataset
+
+The `reports/` directory contains project documentation:
+- `Statement of Work_Sample.pdf` - Project scope and requirements
+
+---
+
+## ⚙️ Configuration & Setup
+
+1. **Clone the repository**
    ```bash
-   # Install dependencies first
+   git clone <repository-url>
+   cd <repository-directory>
+   ```
+
+2. **Set up data directories**
+   ```bash
+   mkdir -p data/men_data data/women_data data/images
+   ```
+
+3. **Add your dataset JSON files**
+   - Place men's product JSON files in `data/men_data/`
+   - Place women's product JSON files in `data/women_data/`
+
+4. **Install dependencies**
+   ```bash
    pip install requests tqdm
-   
-   # Navigate to datapipeline directory
+   ```
+
+5. **Run the image extractor**
+   ```bash
    cd src/datapipeline
-   
-   # Edit extract_images.py to set DATA_DIR (men_data or women_data)
-   # Then run the extractor
    python3 extract_images.py
    ```
 
-   **Configuration in script:**
-   - `DATA_DIR`: Input directory (e.g., `../../data/women_data`)
-   - `OUTPUT_DIR`: Output directory (`../../data/images`)
-   - `MAX_WORKERS`: Number of parallel download threads (default: 20)
-   - `SPECIFIC_FILES`: Optional list of specific JSON files to process
+---
 
-2. **`src/datapipeline/retry_failed.py`**
-   This script retries downloading failed images with extended timeout (60s) and more retries (5 attempts). It reads the `failed_downloads.txt` log, searches for image URLs in dataset files, and attempts to download them again with progressive wait times (3s, 6s, 9s, 12s, 15s).
+## ⚠️ Important Notes
 
-   **Usage:**
-   ```bash
-   cd src/datapipeline
-   python3 retry_failed.py
-   ```
+- ✅ For educational and research purposes only
+- ✅ Please respect Farfetch's terms of service and robots.txt
+- ✅ Use appropriate request delays to avoid overloading servers
+- ✅ Do not commit large data files, trained models, or API keys to GitHub
+- ✅ Use `.gitkeep` files to maintain directory structure
 
-3. **`src/datapipeline/preprocess_cv.py`**
-   This script handles preprocessing on our 100GB dataset. It reduces the image sizes to 128x128 (a parameter that can be changed later) to enable faster iteration during processing. The preprocessed dataset is now reduced to 10GB and stored on GCS.
+---
 
-4. **`src/datapipeline/preprocess_rag.py`**
-   This script prepares the necessary data for setting up our vector database. It performs chunking, embedding, and loads the data into a vector database (ChromaDB).
+## 🤝 Contributing
 
-5. **`src/datapipeline/Pipfile`**
-   We used the following packages to help with preprocessing:
-   - `requests` - HTTP downloads for image extraction
-   - `tqdm` - Progress bars for download tracking
-   - `special cheese package`
+This is an academic project for AC215. Issues and improvement suggestions are welcome.
 
-6. **`src/datapipeline/Dockerfile(s)`**
-   Our Dockerfiles follow standard conventions, with the exception of some specific modifications described in the Dockerfile/described below.
+---
 
+## 📄 License
 
-## Running Dockerfile
-Instructions for running the Dockerfile can be added here.
-To run Dockerfile - `Instructions here`
+This project is for educational purposes only.
 
-**Models container**
-- This container has scripts for model training, rag pipeline and inference
-- Instructions for running the model container - `Instructions here`
+---
 
-**Notebooks/Reports**
-This folder contains code that is not part of container - for e.g: Application mockup, EDA, any 🔍 🕵️‍♀️ 🕵️‍♂️ crucial insights, reports or visualizations.
-
-----
-You may adjust this template as appropriate for your project.
+**Quick Start:** `cd src/datapipeline && python3 extract_images.py`
