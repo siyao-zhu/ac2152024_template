@@ -161,3 +161,15 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 .DS_Store
+
+# Data files - DO NOT commit large datasets
+data/images/*.jpg
+data/images/*.jpeg
+data/images/*.png
+data/images/*.gif
+data/images/failed_downloads.txt
+data/images/urls_not_found.txt
+data/men_data/*.json
+data/women_data/*.json
+# Keep .gitkeep files
+!data/**/.gitkeep
