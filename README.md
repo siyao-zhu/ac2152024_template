@@ -62,6 +62,14 @@ We are working with product datasets from Farfetch, including:
 
 ## 📊 Data Pipeline
 
+The complete data processing pipeline consists of three main stages:
+
+1. **Image Extraction** - Download product images from Farfetch dataset
+2. **Background Removal** - Remove backgrounds for clean product images  
+3. **Preprocessing** - Prepare images for CV models and RAG system
+
+---
+
 ### 1. Image Extraction (`src/datapipeline/extract_images.py`)
 
 The primary script for extracting product images from Farfetch dataset JSON files.
@@ -158,7 +166,53 @@ MAX_WORKERS = 5  # Reduced workers for more stable connections
 
 ---
 
-### 3. Computer Vision Preprocessing (`src/datapipeline/preprocess_cv.py`)
+### 3. Background Removal (`src/bg_removal/`)
+
+NEW in Milestone 2! Automated background removal for fashion product images using state-of-the-art deep learning models.
+
+**Features:**
+- ✅ **Multiple Models** - RMBG-1.4 (fast), BiRefNet (high quality), rembg (fastest)
+- ✅ **GPU/CPU Support** - Auto-detects GPU, falls back to CPU
+- ✅ **Batch Processing** - Multi-threaded processing with progress tracking
+- ✅ **Docker Support** - Containerized execution environment
+- ✅ **Integration Ready** - Seamlessly works with Farfetch image pipeline
+
+**Quick Start:**
+```bash
+cd src/bg_removal
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Quick test
+python test_simple.py
+
+# Process single image (fast)
+python background_removal_fast.py ../../data/images/12345678_index1.jpg output.png
+
+# Batch process all images
+python batch_processor.py \
+    --input ../../data/images \
+    --output ../../data/images_nobg \
+    --workers 4
+```
+
+**Docker Usage:**
+```bash
+cd src/bg_removal
+./docker-shell.sh
+
+# Inside container
+python batch_processor.py --input /app/data/images --output /app/data/images_nobg --workers 4
+```
+
+**Output:** PNG images with transparent backgrounds saved to `../../data/images_nobg/`
+
+See [src/bg_removal/README.md](src/bg_removal/README.md) for detailed documentation.
+
+---
+
+### 4. Computer Vision Preprocessing (`src/datapipeline/preprocess_cv.py`)
 
 Handles preprocessing of images for computer vision tasks.
 
@@ -251,6 +305,23 @@ cd src/datapipeline
 - RAG data preparation (chunking, embedding, vector DB population)
 - Integration with Google Cloud Storage
 
+### Background Removal Container
+
+The background removal container provides automated background removal for product images.
+
+**To run the container:**
+```bash
+cd src/bg_removal
+./docker-shell.sh
+```
+
+**Features:**
+- State-of-the-art deep learning models (RMBG-1.4, BiRefNet)
+- GPU acceleration (auto-detected)
+- Batch processing with multi-threading
+- Progress tracking and error handling
+- Integration with Farfetch image pipeline
+
 ### Models Container
 
 The models container contains scripts for model training, RAG pipeline, and inference.
@@ -322,12 +393,70 @@ The `reports/` directory contains project documentation:
    python3 extract_images.py
    ```
 
+6. **(Optional) Remove backgrounds from product images**
+   ```bash
+   cd src/bg_removal
+   pip install -r requirements.txt
+   python batch_processor.py --input ../../data/images --output ../../data/images_nobg --workers 4
+   ```
+
+---
+
+## 🔄 Complete Pipeline Workflow
+
+Here's how to run the complete data processing pipeline:
+
+```bash
+# Step 1: Extract product images from Farfetch dataset
+cd src/datapipeline
+python extract_images.py
+# Output: ../../data/images/
+
+# Step 2: Remove backgrounds from product images
+cd ../bg_removal
+python batch_processor.py \
+    --input ../../data/images \
+    --output ../../data/images_nobg \
+    --workers 4
+# Output: ../../data/images_nobg/
+
+# Step 3: Preprocess for CV models (in Docker)
+cd ../datapipeline
+./docker-shell.sh
+python preprocess_cv.py
+# Output: GCS bucket
+
+# Step 4: Prepare RAG data (in Docker)
+python preprocess_rag.py
+# Output: ChromaDB vector database
+```
+
 ---
 
 ## ⚠️ Important Notes
 
 - ✅ For educational and research purposes only
 - ✅ Please respect Farfetch's terms of service and robots.txt
+- ✅ Use appropriate request delays to avoid overloading servers
+- ✅ Do not commit large data files, trained models, or API keys to GitHub
+- ✅ Use `.gitkeep` files to maintain directory structure
+
+---
+
+## 🤝 Contributing
+
+This is an academic project for AC215. Issues and improvement suggestions are welcome.
+
+---
+
+## 📄 License
+
+This project is for educational purposes only.
+
+---
+
+**Quick Start:** `cd src/datapipeline && python3 extract_images.py`
+obots.txt
 - ✅ Use appropriate request delays to avoid overloading servers
 - ✅ Do not commit large data files, trained models, or API keys to GitHub
 - ✅ Use `.gitkeep` files to maintain directory structure
