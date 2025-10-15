@@ -10,6 +10,9 @@ Never commit large data files,trained models, personal API Keys/secrets to GitHu
 ```
 ├── Readme.md
 ├── data # DO NOT UPLOAD DATA TO GITHUB, only .gitkeep to keep the directory or a really small sample
+│   ├── images/           # Downloaded product images
+│   ├── men_data/         # Men's product dataset JSON files
+│   └── women_data/       # Women's product dataset JSON files
 ├── notebooks
 │   └── eda.ipynb
 ├── references
@@ -22,8 +25,10 @@ Never commit large data files,trained models, personal API Keys/secrets to GitHu
     │   ├── Pipfile.lock
     │   ├── dataloader.py
     │   ├── docker-shell.sh
+    │   ├── extract_images.py   # Image extraction from Farfetch dataset
+    │   ├── retry_failed.py     # Retry failed image downloads
     │   ├── preprocess_cv.py
-    │   ├── preprocess_rag.py
+    │   └── preprocess_rag.py
     └── models
         ├── Dockerfile
         ├── docker-shell.sh
@@ -62,17 +67,50 @@ Additionally, we compiled 250 bibliographical sources on cheese, including books
 
 ## Data Pipeline Overview
 
-1. **`src/datapipeline/preprocess_cv.py`**
+1. **`src/datapipeline/extract_images.py`**
+   This script extracts product images (index 1 and 2) from Farfetch dataset JSON files with multi-threading and progress bars. It processes all JSON files in the data directory (men_data or women_data), downloads images in parallel with configurable worker threads, and saves them to the `data/images/` folder. Features include smart resume (skips already downloaded images), error logging to `failed_downloads.txt`, and real-time progress tracking.
+
+   **Usage:**
+   ```bash
+   # Install dependencies first
+   pip install requests tqdm
+   
+   # Navigate to datapipeline directory
+   cd src/datapipeline
+   
+   # Edit extract_images.py to set DATA_DIR (men_data or women_data)
+   # Then run the extractor
+   python3 extract_images.py
+   ```
+
+   **Configuration in script:**
+   - `DATA_DIR`: Input directory (e.g., `../../data/women_data`)
+   - `OUTPUT_DIR`: Output directory (`../../data/images`)
+   - `MAX_WORKERS`: Number of parallel download threads (default: 20)
+   - `SPECIFIC_FILES`: Optional list of specific JSON files to process
+
+2. **`src/datapipeline/retry_failed.py`**
+   This script retries downloading failed images with extended timeout (60s) and more retries (5 attempts). It reads the `failed_downloads.txt` log, searches for image URLs in dataset files, and attempts to download them again with progressive wait times (3s, 6s, 9s, 12s, 15s).
+
+   **Usage:**
+   ```bash
+   cd src/datapipeline
+   python3 retry_failed.py
+   ```
+
+3. **`src/datapipeline/preprocess_cv.py`**
    This script handles preprocessing on our 100GB dataset. It reduces the image sizes to 128x128 (a parameter that can be changed later) to enable faster iteration during processing. The preprocessed dataset is now reduced to 10GB and stored on GCS.
 
-2. **`src/datapipeline/preprocess_rag.py`**
+4. **`src/datapipeline/preprocess_rag.py`**
    This script prepares the necessary data for setting up our vector database. It performs chunking, embedding, and loads the data into a vector database (ChromaDB).
 
-3. **`src/datapipeline/Pipfile`**
+5. **`src/datapipeline/Pipfile`**
    We used the following packages to help with preprocessing:
+   - `requests` - HTTP downloads for image extraction
+   - `tqdm` - Progress bars for download tracking
    - `special cheese package`
 
-4. **`src/preprocessing/Dockerfile(s)`**
+6. **`src/datapipeline/Dockerfile(s)`**
    Our Dockerfiles follow standard conventions, with the exception of some specific modifications described in the Dockerfile/described below.
 
 
