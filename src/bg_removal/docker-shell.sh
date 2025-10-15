@@ -16,4 +16,5 @@ docker run --rm -it \
     -v "$(pwd)/../../data:/app/data" \
     -v "$(pwd)/test_output:/app/test_output" \
     -v "$(pwd)/test_pics:/app/test_pics" \
-    $IMAGE_NAME /bin/bash
+    $IMAGE_NAME \
+    /bin/bash
